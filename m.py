@@ -9,10 +9,10 @@ from flask
 import threading
 
 # insert your Telegram bot token here
-bot = telebot.TeleBot('')
+bot = telebot.TeleBot('7102669975:AAGKoAvRLrICSmMeTuxnuZZ1TF70Dan9BJk')
 
 # Admin user IDs
-admin_id = [""]
+admin_id = ["5930596985"]
 
 # File to store allowed user IDs
 USER_FILE = "users.txt"
